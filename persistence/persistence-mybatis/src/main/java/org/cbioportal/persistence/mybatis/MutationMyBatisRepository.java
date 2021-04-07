@@ -9,7 +9,8 @@ import org.cbioportal.persistence.mybatis.util.OffsetCalculator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Repository
 public class MutationMyBatisRepository implements MutationRepository {
@@ -43,8 +44,36 @@ public class MutationMyBatisRepository implements MutationRepository {
                                                                   String projection, Integer pageSize, 
                                                                   Integer pageNumber, String sortBy, String direction) {
 
-        return mutationMapper.getMutationsInMultipleMolecularProfiles(molecularProfileIds, sampleIds, entrezGeneIds, 
-            null, projection, pageSize, offsetCalculator.calculate(pageSize, pageNumber), sortBy, direction);
+        return getGroupedMolecularProfileSamples(molecularProfileIds, sampleIds)
+            .entrySet()
+            .stream()
+            .flatMap(entry -> fetchMutationsInMolecularProfile(entry.getKey(),
+                entry.getValue(),
+                entrezGeneIds,
+                null,
+                projection,
+                pageSize,
+                offsetCalculator.calculate(pageSize, pageNumber),
+                sortBy,
+                direction).stream())
+            .collect(Collectors.toList());
+    }
+
+    private Map<String,List<String>> getGroupedMolecularProfileSamples(List<String> molecularProfileIds, List<String> sampleIds) {
+        Map<String,List<String>> groupMolecularProfileSamples = new HashMap<>();
+
+        for(int i = 0; i< molecularProfileIds.size(); i++) {
+            String molecularProfileId = molecularProfileIds.get(i);
+            String sampleId = sampleIds.get(i);
+            if(!groupMolecularProfileSamples.containsKey(molecularProfileId)) {
+                List<String> sampleList = new ArrayList<>();
+                sampleList.add(sampleId);
+                groupMolecularProfileSamples.put(molecularProfileId,sampleList);
+            } else {
+                groupMolecularProfileSamples.get(molecularProfileId).add(sampleId);
+            }
+        }
+        return groupMolecularProfileSamples;
     }
 
     @Override
@@ -86,8 +115,19 @@ public class MutationMyBatisRepository implements MutationRepository {
             List<String> sampleIds, List<Integer> entrezGeneIds, String projection, Integer pageSize,
             Integer pageNumber, String sortBy, String direction) {
 
-        return mutationMapper.getFusionsInMultipleMolecularProfiles(molecularProfileIds, sampleIds, entrezGeneIds,
-                null, projection, pageSize, offsetCalculator.calculate(pageSize, pageNumber), sortBy, direction);
+        return getGroupedMolecularProfileSamples(molecularProfileIds, sampleIds)
+            .entrySet()
+            .stream()
+            .flatMap(entry -> mutationMapper.getFusionsInMultipleMolecularProfiles(Arrays.asList(entry.getKey()),
+                entry.getValue(),
+                entrezGeneIds,
+                null,
+                projection,
+                pageSize,
+                offsetCalculator.calculate(pageSize, pageNumber),
+                sortBy,
+                direction).stream())
+            .collect(Collectors.toList());
     }
     // TODO: cleanup once fusion/structural data is fixed in database
 

@@ -1,5 +1,6 @@
 package org.cbioportal.persistence.mybatis;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.cbioportal.model.*;
 import org.cbioportal.model.meta.MutationMeta;
 import org.junit.Assert;
@@ -230,13 +231,16 @@ public class MutationMyBatisRepositoryTest {
             sampleIds, null, "SUMMARY", null, null, null, null);
 
         Assert.assertEquals(3, result.size());
-        Mutation mutation1 = result.get(0);
+
+        ObjectMapper mapper = new ObjectMapper();
+        System.out.println(mapper.writeValueAsString(result));
+        Mutation mutation1 = result.get(2);
         Assert.assertEquals("study_tcga_pub_mutations", mutation1.getMolecularProfileId());
         Assert.assertEquals("TCGA-A1-A0SH-01", mutation1.getSampleId());
         Mutation mutation2 = result.get(1);
         Assert.assertEquals("study_tcga_pub_mutations", mutation2.getMolecularProfileId());
         Assert.assertEquals("TCGA-A1-A0SH-01", mutation2.getSampleId());
-        Mutation mutation3 = result.get(2);
+        Mutation mutation3 = result.get(0);
         Assert.assertEquals("acc_tcga_mutations", mutation3.getMolecularProfileId());
         Assert.assertEquals("TCGA-A1-B0SO-01", mutation3.getSampleId());
     }
